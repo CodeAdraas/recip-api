@@ -15,6 +15,7 @@ class SQL {
     private $rows;
     private $result;
     private $error;
+    private $queries = [];
     
     private function __construct($services) {
         foreach($services as $key => $service) self::${$key} = $service;
@@ -46,61 +47,86 @@ class SQL {
         return $types;
     }
 
+    public function queries( int $index = 0) {
+        return isset( $this->queries[ $index - 1 ] ) ? $this->queries[ $index - 1 ] : false;
+    }
+
+    /**
+    * Check if given array is associative or not
+    */
+    public static function isAssoc(array $arr){
+        if (array() === $arr) return false;
+        return array_keys($arr) !== range(0, count($arr) - 1);
+    }
+
     /**
     * Query
     */
     public function query(array $args) 
     {
-        $required = ["sql"];
 
-        foreach($required as $key) {
-            if(!isset($args[$key])) {
-                self::$Response::http(["code" => 400, "die"  => true]);
-            }
-        }
+        $required = ["sql"];
+        foreach($required as $key) if(!isset($args[$key])) throw new \Exception("Missing required query fields");
 
         $this->conn = isset($args["conn"]) ? $args["conn"] : self::$DB->open();
+        if(!$this->conn) throw new \Exception("No connection with database");
 
-        if(!$this->conn)
-        {
-            self::$Response::http([ "code" => 500, "response" => [
-                "status" => 500,
-                "message" => "geen verbinding met database"
-            ], "die" => true]);
-        }
-        else
-        {
-            $this->sql    = $args["sql"];
-            $this->types  = isset($args["binds"]) ? self::paramTypes($args["binds"]) : false;
-            $this->binds  = isset($args["binds"]) ? $args["binds"] : [];
-            $this->status = false;
-            $this->rows   = 0;
-            $this->result = false;
-            $this->error  = false;
+        $this->sql    = $args["sql"];
+        $this->types  = isset($args["binds"]) ? self::paramTypes($args["binds"]) : false;
+        $this->binds  = isset($args["binds"]) ? $args["binds"] : [];
+        $this->status = false;
+        $this->rows   = 0;
+        $this->result = false;
+        $this->error  = false;
+
+        try {
 
             $stmt = $this->conn->prepare($this->sql);
+            $stmt->execute($this->binds);
 
-            if($stmt)
-            {
-                if($stmt->execute($this->binds)) $this->status = true;
-                if(isset($args["options"]["return"]) && $args["options"]["return"]) {
-                    $data = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-                    $this->rows = count($data);
-                    if($data) $this->result = (isset($args["options"]["array"]) && $args["options"]["array"]) ? $data : $data[0];
+            if(isset($args["options"]["return"]) && $args["options"]["return"]) {
+                $data = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+                $this->rows = count($data);
+                if($data) {
+                    $this->result = (isset($args["options"]["array"]) && $args["options"]["array"]) ? $data : $data[0];
+
+                    if( !self::isAssoc( $this->result ) ) {                      
+                        foreach( $this->result as $i => $obj ) {
+                            foreach( $obj as $key => $value ) {
+                                if( $value === "true" ) {
+                                    $this->result[$i][$key] = true;
+                                } elseif ( $value === "false") {
+                                    $this->result[$i][$key] = false;
+                                }
+                            }
+                        }
+                    } else {
+                        foreach( $this->result as $key => $value ) {
+                            if( $value === "true" ) {
+                                $this->result[$key] = true;
+                            } elseif ( $value === "false") {
+                                $this->result[$key] = false;
+                            }
+                        }
+                    }
                 }
             }
 
-            if(!self::$DB::ping($this->conn)) $this->error = true;
-            if(isset($args["options"]["close"]) && $args["options"]["close"]) self::$DB::close($this->conn);
-            if(isset($args["options"]["close"]) && $args["options"]["close"]) $this->conn = false;
+            if(isset($args["options"]["close"]) && $args["options"]["close"]) {
+                self::$DB::close($this->conn);
+                $this->conn = false;
+            }
 
-            return array(
+            array_push($this->queries, array(
                 "status" => $this->status,
                 "conn"   => $this->conn,
                 "rows"   => $this->rows,
-                "result" => $this->result,
-                "error"  => $this->error,
-            );
+                "result" => $this->result
+            ));
+
+            return self::$SQL;
+        } catch( \PDOException $e) {
+            throw new \Exception( $e->getMessage() );
         }
     }
 
