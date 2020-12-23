@@ -4,8 +4,9 @@ use \Delight\Router\Router;
 
 $flow = $Auth->flow();
 
-$API = new Router( "/api" );
+$API = new Router( "/v1" );
 
+$API->post("/subscription",           [$Controller, "static"], [ [ "path" => "api/subscription", "file" => "get" ] ]) && die();
 $API->post("/payments",               [$Controller, "static"], [ [ "path" => "api/payments/post", "file" => "webhook" ] ]) && die();
 $API->post("/payments/subscriptions", [$Controller, "static"], [ [ "path" => "api/payments/post", "file" => "subscription-webhook" ] ]) && die();
 $API->get("/auth/redirect",           [$Controller, "static"], [ [ "path" => "api/auth",          "file" => "redirect" ] ]) && die();

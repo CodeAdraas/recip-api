@@ -60,6 +60,21 @@ class Auth {
      */
     public function getCookie(string $name) {
         return (!isset($_COOKIE[$name])) ? false : $_COOKIE[$name];
+
+    }
+
+    /**
+     * Handle thrown exceptions
+     */
+    public function handleException( $message ) {
+        if( is_string( $message ) ) {
+            self::$Response::http([ "code" => 500, "response" => [
+                "status" => 500,
+                "error" => $message
+            ]], true );
+        } else {        
+            self::$Response::http([ "code" => $message ], true );
+        }
     }
 
     /**

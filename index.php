@@ -13,7 +13,7 @@ use \controllers\Controller;
 
 header('Access-Control-Allow-Origin: *');
 
-require "./inc/CORS.php";
+require "./inc/auth/CORS.php";
 require "./inc/app.php";
 require "./inc/dependencies.php";
 
