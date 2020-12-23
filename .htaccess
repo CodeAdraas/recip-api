@@ -4,7 +4,7 @@
 #Header set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" env=HTTPS
 #Header set X-XSS-Protection "1; mode=block"
 
-# Redirect every load to index.php
+# Redirect every server request to index.php
 RewriteEngine On
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule . index.php [L]
