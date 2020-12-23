@@ -60,7 +60,6 @@ class Auth {
      */
     public function getCookie(string $name) {
         return (!isset($_COOKIE[$name])) ? false : $_COOKIE[$name];
-
     }
 
     /**
